@@ -1,0 +1,15 @@
+# Python / test cache
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Local env / runtime
+.env
+.env.local
+
+# Generated runtime artifacts
+tmp/
