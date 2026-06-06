@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from typing import Any
 
 from hermes_max_adapter.client import build_answer_callback_request, build_send_request, classify_send_response
 from hermes_max_adapter.config import MaxAdapterConfig
@@ -159,7 +160,7 @@ class MaxAdapter:
     async def get_chat_info(self, chat_id: str) -> dict[str, str]:
         return {"name": chat_id, "type": "dm"}
 
-    def health_status(self) -> dict:
+    def health_status(self) -> dict[str, Any]:
         return {
             "connected": self.connected,
             "config": {
@@ -170,3 +171,10 @@ class MaxAdapter:
             },
             "metrics": dict(self.metrics.counters),
         }
+
+    def status(self) -> dict[str, Any]:
+        return self.health_status()
+
+    async def get_status(self) -> dict[str, Any]:
+        return self.status()
+
