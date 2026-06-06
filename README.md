@@ -1,6 +1,23 @@
 # Hermes MAX Adapter
 
-Production-ready MAX Bot API adapter plugin for Hermes Agent.
+Open-source MAX connector package for agent runtimes.
+
+What a user should be able to do:
+- clone the repo
+- install dependencies
+- configure bot token / webhook URL / secret
+- attach to their runtime
+- run smoke checks
+- start using MAX without custom project surgery
+
+## Current readiness
+
+Closest to ready:
+- Hermes
+
+Partially ready:
+- OpenClaw native target exists and tests pass in upstream repo
+- GoClaw native target exists, but wider upstream attach proof is blocked by unrelated build debt in GoClaw
 
 ## What is already proven
 
@@ -12,23 +29,20 @@ Live-confirmed against the real MAX client/API:
 - outbound video
 
 Fresh automated verification:
-- `pytest -q` → `159 passed`
+- `pytest -q` → `180 passed`
 
-## Current status
-
-This repo is ready to show as a working Hermes/MAX adapter and is close to public-repo ready.
-It is a real working plugin codebase, not a mock or toy prototype.
-
-The remaining work is mostly repo polish and docs clarity, not core runtime bring-up.
+Focused upstream proof:
+- OpenClaw native MAX extension tests pass in `~/workspaces/openclaw`
+- GoClaw native MAX package test passes in `~/workspaces/goclaw/internal/channels/max`
 
 ## Architecture overview
 
 High-level shape:
 - `plugin.py` exposes Hermes plugin registration
-- `adapter.py` implements the MAX adapter runtime
+- `adapter.py` implements the shared MAX adapter core
 - `webhook_app.py` / `webhook_server.py` handle inbound webhook ingress
 - `client.py` / `transport.py` handle outbound MAX API requests
-- `renderer.py` / `upload.py` map Hermes outbound content into MAX payloads
+- `renderer.py` / `upload.py` map outbound content into MAX payloads
 - `updates.py` / `mapping.py` normalize inbound MAX updates
 - `dedupe.py` / `rate_limit.py` / `observability.py` provide runtime safety
 
@@ -38,159 +52,92 @@ High-level shape:
 python -m venv .venv
 . .venv/bin/activate
 pip install -e . pytest
+action='cp .env.example .env'
+python scripts/setup.py
 pytest -q
-python scripts/setup.py
 ```
 
-## Minimal local bootstrap
-
-```bash
-cp .env.example .env
-python scripts/setup.py
-```
+`examples/local_demo.py` is available for a minimal local demo harness.
 
 ## Setup wizard
 
-Run the interactive wizard:
-
-```bash
-python scripts/setup.py
-```
-
-The wizard can:
-- check environment dependencies before setup
-- create or refresh `.venv`
-- install Python project dependencies automatically
-- detect Docker / Docker Compose / daemon access problems
-- offer guided install for missing Docker or Docker Compose
-- configure token-only mode or webhook-ready mode
-- configure local, external, or skipped Redis
-- validate webhook and Redis URLs
+`scripts/setup.py` is the setup wizard.
+It can:
+- validate the local environment
+- check Docker / docker compose availability
 - write `.env`
-- optionally run smoke checks after setup
+- keep a token-only flow for early bring-up
+- prepare webhook-ready mode
 
-## Required environment
+## Minimum config
 
+Required values:
 - `MAX_BOT_TOKEN`
 - `MAX_WEBHOOK_SECRET`
 - `MAX_WEBHOOK_URL`
 
-## Optional environment
-
-- `MAX_ENABLE_LONG_POLLING`
-- `MAX_MAX_RETRIES`
-- `MAX_RETRY_BACKOFF_SECONDS`
-- `MAX_REQUEST_TIMEOUT_SECONDS`
-- `LOCAL_WEBHOOK_PORT`
+Optional values:
 - `REDIS_URL`
-- `MAX_DEDUPE_TTL_SECONDS`
+- `MAX_ENABLE_LONG_POLLING`
+- retry / timeout settings
 
 ## Token-only mode
 
-Token-only mode is supported for early setup before a public webhook exists.
-In token-only mode you can validate outbound flow first, then move to webhook mode later.
-Use the live outbound smoke script to verify real outbound delivery:
+Token-only mode is supported for early outbound verification before a public webhook is ready.
+Use the live outbound smoke helper first:
 - `python scripts/live_outbound_smoke.py`
 
-## Local Redis
+## Local Redis / dedupe
 
-This repo includes a local Redis development path for dedupe/idempotency work.
+For local Redis-backed dedupe work:
 
 ```bash
 docker compose up -d redis
 python scripts/redis_smoke.py
 ```
 
-## Hermes integration
+Use `REDIS_URL` to point at your Redis instance.
 
-Plugin entrypoint is implemented in:
-- `src/hermes_max_adapter/plugin.py`
+## Included local verification helpers
 
-It exposes:
-- `build_registration()`
-- `validate_config()`
-- `adapter_factory`
-
-If you want the fastest attach path, start here:
-- `docs/integration/quick-attach.md`
-
-Current plugin runtime notes:
-- see `docs/specs/plugin-runtime.md`
-- see `docs/integration/hermes.md`
-- see `docs/integration/quick-attach.md`
-
-## Hermes config example
-
-Conceptually Hermes should provide a config object whose fields map like this:
-
-```python
-cfg.bot_token = os.environ["MAX_BOT_TOKEN"]
-cfg.extra = {
-    "token": os.environ["MAX_BOT_TOKEN"],
-    "webhook_secret": os.environ.get("MAX_WEBHOOK_SECRET", ""),
-    "webhook_url": os.environ.get("MAX_WEBHOOK_URL"),
-    "enable_long_polling": False,
-}
-```
-
-The plugin registration then builds `MaxAdapter` from that config via `adapter_factory`.
-
-## Local/dev tools
-
-- setup wizard: `python scripts/setup.py`
-- local demo: `python examples/local_demo.py`
-- local webhook server: `python examples/local_webhook_server.py`
-- outbound live smoke: `python scripts/live_outbound_smoke.py`
-- webhook/subscription smoke: `python scripts/live_smoke.py`
-- redis smoke: `python scripts/redis_smoke.py`
-- watchdog helper: `python scripts/watchdog.py`
+These scripts auto-load repo-local `.env`:
+- `python scripts/live_smoke.py`
+- `python scripts/live_outbound_smoke.py`
+- `python scripts/watchdog.py`
+- `python scripts/redis_smoke.py`
+- `python examples/local_webhook_server.py`
 
 ## Subscription handling
 
-This adapter includes subscription reconcile foundation.
-Recommended operational pattern:
-- inspect current remote subscriptions on startup
-- re-subscribe if remote state drifts from local config
-- run a watchdog to detect webhook drift or silent unsubscribe
+The repo includes subscription reconcile helpers.
+Operationally you should verify:
+- subscription exists
+- webhook URL matches config
+- watchdog can detect drift
 
-## Deployment notes
+## Runtime attach docs
 
-Production guidance:
-- HTTPS only
-- webhook endpoint on public 443 via reverse proxy
-- trusted TLS certificate
-- secret validation on webhook ingress
-- `docker compose` can be used locally for Redis-backed development
+- Hermes: `docs/integration/hermes.md`
+- OpenClaw: `docs/integration/openclaw-attach.md`
+- GoClaw: `docs/integration/goclaw-attach.md`
+- Multi-runtime status: `docs/integration/multi-runtime.md`
+- Quick attach: `docs/integration/quick-attach.md`
 
-See:
-- `docs/specs/deployment.md`
+## Honest boundary
+
+Ready now:
+- public package bootstrap
+- repo-local setup flow
+- Hermes integration path
+- OpenClaw native target location + passing local upstream tests
+- GoClaw native target location + passing focused package proof
+
+Not yet fully proven for strangers:
+- full clean-room OpenClaw attach outside current upstream workspace
+- full GoClaw upstream attach until unrelated `internal/channels/manager.go` build debt is fixed
 
 ## Capability truth
 
-For the honest verified state, see:
+For the verified state, see:
 - `docs/max-media-truth.md`
-- `docs/api/max-format-matrix.md`
-
-## Repo scope
-
-This repo contains:
-- Hermes plugin registration
-- MAX adapter runtime
-- webhook ingress handling
-- outbound client / upload flow
-- normalization / rendering / retry / dedupe
-- setup scripts and smoke scripts
-- tests and deployment notes
-
-## Publication checklist
-
-Before publishing:
-- ensure `.env`, `.venv`, `tmp/`, and caches are not committed
-- run `pytest -q`
-- re-read `README.md`
-- re-read `docs/integration/hermes.md`
-- verify capability/status docs still match live truth
-
-## Known boundary
-
-This repo is runtime-shaped for Hermes, but the plugin has not yet been proven inside a full public Hermes gateway distribution as an end-user install package. The adapter code itself is tested and the MAX flows above are live-confirmed.
+- `docs/openclaw-goclaw-upstream-truth.md`

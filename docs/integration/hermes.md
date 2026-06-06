@@ -2,36 +2,36 @@
 
 ## Purpose
 
-This repo provides a MAX platform adapter plugin for Hermes Agent.
+This repo provides a public MAX adapter package for Hermes Agent.
+A user should be able to install it from GitHub, set bot/runtime config, attach it, and run smoke checks without project-specific handholding.
 
 ## Plugin entrypoint
 
 Runtime entrypoint:
 - `src/hermes_max_adapter/plugin.py`
 
-Exported registration:
+Exports:
 - `build_registration()`
+- `validate_config()`
 
 Registration metadata includes:
 - platform name: `max`
 - label: `MAX`
 - `required_env = ["MAX_BOT_TOKEN"]`
-- `validate_config`
-- `adapter_factory`
 - `cron_deliver_env_var = "MAX_HOME_CHANNEL"`
 - `max_message_length = 4000`
+- `adapter_factory`
 
-## Adapter factory behavior
+## Example wiring
 
-`adapter_factory` builds `MaxAdapter` using:
-- bot token
-- webhook secret
-- webhook URL
-- long polling flag
+```python
+from hermes_max_adapter.plugin import build_registration
 
-## Example wiring shape
+registration = build_registration()
+adapter = registration["adapter_factory"](cfg)
+```
 
-Hermes-side config object should provide:
+Example config shape:
 
 ```python
 cfg.bot_token = os.environ["MAX_BOT_TOKEN"]
@@ -43,36 +43,40 @@ cfg.extra = {
 }
 ```
 
-Then:
+## Local install flow
 
-```python
-registration = build_registration()
-adapter = registration["adapter_factory"](cfg)
+```bash
+python -m venv .venv
+. .venv/bin/activate
+pip install -e . pytest
+cp .env.example .env
+python scripts/setup.py
+pytest -q
 ```
 
-## Runtime expectation
+## Included verification helpers
 
-Hermes plugin loader should:
-1. import the plugin module
-2. call `build_registration()`
-3. use `adapter_factory(...)` to instantiate the adapter
-4. call adapter lifecycle methods (`connect`, `disconnect`, `send`, `get_chat_info`)
+These repo scripts auto-load local `.env`:
+- `python scripts/live_smoke.py`
+- `python scripts/live_outbound_smoke.py`
+- `python scripts/watchdog.py`
+- `python examples/local_webhook_server.py`
 
 ## Current proof level
 
-What is proven:
+Proven:
 - plugin registration object exists and is tested
 - adapter factory exists and is tested
-- MAX runtime flows are live-confirmed for text, document, image/photo, video, and inbound webhook
+- repo-local setup/install flow exists
+- MAX runtime flows are live-confirmed for inbound webhook, text, document, image/photo, and video
 
-What is not yet fully proven:
-- a complete end-user install of this package inside a real public Hermes gateway distribution with final loader wiring
+Not yet fully proven:
+- full end-user install inside every public Hermes distribution variant without any loader-specific adaptation
 
-## Recommended validation after integration
+## Recommended validation after attach
 
-After wiring into Hermes, verify:
-1. plugin registration loads successfully
-2. adapter starts with env config
+1. plugin registration loads
+2. adapter starts from env/config
 3. webhook ingress receives MAX events
-4. Hermes can send a text reply
-5. Hermes can send document/image/video through the adapter
+4. text reply works
+5. document/image/video send works

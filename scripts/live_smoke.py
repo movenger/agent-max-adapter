@@ -8,10 +8,12 @@ if str(SRC) not in sys.path:
 
 from hermes_max_adapter.client import build_answer_callback_request
 from hermes_max_adapter.config import MaxAdapterConfig
+from hermes_max_adapter.env import load_project_env
 from hermes_max_adapter.subscription import build_subscribe_request
 
 
 def main() -> None:
+    load_project_env(ROOT / ".env")
     config = MaxAdapterConfig.from_env()
     if not config.bot_token or not config.webhook_url:
         print("LIVE_SMOKE_SKIPPED: missing MAX_BOT_TOKEN or MAX_WEBHOOK_URL")

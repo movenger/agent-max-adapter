@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import sys
 
@@ -8,9 +10,11 @@ if str(SRC) not in sys.path:
 
 from hermes_max_adapter.config import MaxAdapterConfig
 from hermes_max_adapter.dedupe import build_dedupe_store
+from hermes_max_adapter.env import load_project_env
 
 
 def main() -> None:
+    load_project_env(ROOT / ".env")
     config = MaxAdapterConfig.from_env()
     if not config.redis_url:
         print("REDIS_SMOKE_SKIPPED: missing REDIS_URL")

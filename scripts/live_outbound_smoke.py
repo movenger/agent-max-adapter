@@ -8,6 +8,7 @@ if str(SRC) not in sys.path:
 
 from hermes_max_adapter.client import build_answer_callback_request, build_send_request
 from hermes_max_adapter.config import MaxAdapterConfig
+from hermes_max_adapter.env import load_project_env
 from hermes_max_adapter.models.attachments import AttachmentKind, AttachmentRef, AttachmentSourceKind
 from hermes_max_adapter.upload import build_outbound_attachment_payload
 
@@ -19,8 +20,8 @@ class PreviewSender:
 
 
 def main() -> None:
+    load_project_env(ROOT / ".env")
     config = MaxAdapterConfig.from_env()
-    preview_chat_id = (Path.cwd().joinpath('.env').read_text() if Path('.env').exists() else '')
     if not config.bot_token:
         print("LIVE_OUTBOUND_SMOKE_SKIPPED: missing MAX_BOT_TOKEN")
         return

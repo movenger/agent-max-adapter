@@ -11,9 +11,11 @@ if str(SRC) not in sys.path:
 
 from hermes_max_adapter.adapter import MaxAdapter
 from hermes_max_adapter.config import MaxAdapterConfig
+from hermes_max_adapter.env import load_project_env
 from hermes_max_adapter.webhook_app import WebhookApplication
 
 
+load_project_env(ROOT / ".env")
 config = MaxAdapterConfig.from_env()
 adapter = MaxAdapter(config=config)
 app = WebhookApplication(adapter=adapter, webhook_secret=config.webhook_secret)
